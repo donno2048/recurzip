@@ -160,7 +160,6 @@ func makeZip() {
 	tailsuf[0+1] = byte(sufpos>>8)
 	tail[len(tail)-6+0] = byte(sufpos)
 	tail[len(tail)-6+1] = byte(sufpos>>8)
-	_, whole = makeGeneric(zhead, head, ztail, tail, nil)
 	_, whole = makeGeneric(zhead, head, ztail, tail, headsize[0:4])
 	f, _ := os.OpenFile("r.zip", os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0666)
 	f.Write(whole)
@@ -782,15 +781,10 @@ func (f *inflater) dataBlock() error {
 		if m > n {
 			m = n
 		}
-		m, err := io.ReadFull(f.r, f.hist[f.hp:f.hp+m])
+		m, _ = io.ReadFull(f.r, f.hist[f.hp:f.hp+m])
 		f.roffset += int64(m)
 		n -= m
 		f.hp += m
-		if f.hp == len(f.hist) {
-			if err = f.flush(); err != nil {
-				return err
-			}
-		}
 	}
 	return nil
 }
@@ -830,10 +824,7 @@ func (f *inflater) flush() error {
 	if f.hp == 0 {
 		return nil
 	}
-	n, err := f.w.Write(f.hist[0:f.hp])
-	if n != f.hp && err == nil {
-		err = io.ErrShortWrite
-	}
+	f.w.Write(f.hist[0:f.hp])
 	f.woffset += int64(f.hp)
 	f.hp = 0
 	f.hfull = true
